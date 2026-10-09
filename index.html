@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>莫高 · 白日 — 敦煌洞窟漫游</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23120c08'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23c9a35c' stroke-width='1.6'/%3E%3Ccircle cx='16' cy='16' r='2.4' fill='%23a8342a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="stage">
+  <!-- 洞窟场景:按原图比例铺满,朱砂点定位在画面特征上 -->
+  <div id="scene">
+    <div class="mural-zoom">
+      <div class="mural" id="mural"></div>
+      <!-- 夜游:灯下显影的“未氧化本色”,用光罩随灯显形 -->
+      <div class="mural-glow" id="muralGlow"></div>
+      <!-- 夜游:颜料回鲜层——灯照久处,颜色缓缓苏醒并留住片刻 -->
+      <canvas class="fresh-layer" id="fresh"></canvas>
+      <!-- 紫外模式:显形被覆盖的底层——榜题框、底稿与修复接缝(程序化) -->
+      <canvas class="uv-layer" id="uv"></canvas>
+      <!-- 真身龛:白天是空龛;夜里灯照久处,1924 年离开的菩萨借灯还乡 -->
+      <div class="niche" id="niche">
+        <img id="nicheStatue" src="assets/bodhisattva.jpg"
+             alt="莫高窟第328窟跪姿供养菩萨,现藏哈佛艺术博物馆(照片 CC BY-SA 4.0 Patrick20242023 / Wikimedia Commons)">
+      </div>
+    </div>
+    <div class="shaft"></div>
+    <div class="shaft-core"></div>
+    <div class="night-veil" id="nightVeil"></div>
+    <div class="lamp-glow" id="lampGlow"></div>
+    <div class="uv-veil"></div>
+  </div>
+
+  <!-- 环视:圆柱投影画布,拖拽转头 -->
+  <canvas id="pano"></canvas>
+
+  <!-- 动效画布:浮尘 / 飘带 / 散花 -->
+  <canvas id="fx"></canvas>
+
+  <!-- 暗角 -->
+  <div class="vignette"></div>
+
+  <!-- 左上角题签:窟号 + 原型小注 -->
+  <header class="chip" id="chip">
+    <span class="seal">敦煌</span>
+    <span class="chip-col">
+      <span class="chip-text" id="chipText">莫高 · 白日</span>
+      <span class="chip-cave" id="chipCave">第 328 窟 · 空龛</span>
+    </span>
+  </header>
+  <p class="proto-line" id="protoLine"></p>
+
+  <!-- 右上角:环视 / 语言 / 声音 / 紫外 / 入夜 -->
+  <button class="lang-toggle" id="langToggle" aria-label="Switch language">EN</button>
+  <button class="sound-toggle" id="soundToggle" aria-label="静音">音</button>
+  <button class="uv-toggle" id="uvToggle" aria-label="紫外">紫</button>
+  <button class="pano-toggle" id="panoToggle" aria-label="环视洞窟">环</button>
+  <button class="night-toggle" id="nightToggle" aria-label="入夜">夜</button>
+
+  <!-- 底部提示 -->
+  <div class="hint" id="hint">移动光影,随你流转 · 点朱砂,听壁上故事 · ← → 过窟</div>
+
+  <!-- 左下角:素材与授权 -->
+  <button class="credits-toggle" id="creditsToggle">素材与授权</button>
+  <aside id="creditsPanel" aria-hidden="true">
+    <h3 id="creditsTitle">素材与授权</h3>
+    <ul id="creditsList"></ul>
+  </aside>
+</div>
+
+<!-- 崖面:洞窟之间行走
+     必须在 #stage 之外 —— #stage 是 position:fixed,会自建层叠上下文,
+     留在里面时 z-index 再高也会被故事卡片的遮罩压住,点了没反应 -->
+<nav id="cliff" aria-label="洞窟之间"></nav>
+<button class="edge-nav prev" id="prevCave" aria-label="上一窟">‹</button>
+<button class="edge-nav next" id="nextCave" aria-label="下一窟">›</button>
+
+<!-- 过窟:两窟之间是一段黑,走过去 -->
+<div class="walk-veil" id="walkVeil" aria-hidden="true">
+  <span class="walk-text" id="walkText">穿过崖壁…</span>
+</div>
+
+<!-- 故事卡片 -->
+<aside id="card" aria-hidden="true">
+  <button class="card-close" id="cardClose" aria-label="关闭">×</button>
+  <div class="card-img" id="cardImg"></div>
+  <div class="card-body">
+    <h2 class="card-title" id="cardTitle"></h2>
+    <p class="card-sub" id="cardSub"></p>
+    <p class="card-text" id="cardText"></p>
+  </div>
+</aside>
+<div id="cardMask"></div>
+
+<!-- 入窟引导 -->
+<div id="intro">
+  <div class="intro-ornament"></div>
+  <h1 class="intro-title" id="introTitle">莫高 · 白日</h1>
+  <div class="intro-seal">敦煌</div>
+  <p class="intro-quote" id="introQuote">白日入窟,千年未醒。</p>
+  <p class="intro-phase" id="introPhase">此刻莫高 · …</p>
+  <button id="enter" disabled>入&ensp;窟</button>
+  <p class="intro-note" id="introNote">敦煌 · 莫高窟白日漫游</p>
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>
